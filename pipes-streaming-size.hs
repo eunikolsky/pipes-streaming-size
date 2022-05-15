@@ -6,15 +6,21 @@ import Pipes
 import Pipes.HTTP
 import qualified Data.ByteString as BL
 import qualified Pipes.ByteString as PB
-import qualified Pipes.Prelude as P
 
 type Size = Int
 
-type SizeState = (Size, BL.ByteString)
+printTotalSize :: Pipe BL.ByteString BL.ByteString IO ()
+printTotalSize = iter 0
+  where
+    iter :: Size -> Pipe BL.ByteString BL.ByteString IO ()
+    iter size = do
+      bs <- await
 
-scanTotalSize :: SizeState -> BL.ByteString -> IO SizeState
-scanTotalSize (size, _) bs = let newSize = size + (BL.length bs)
-  in print newSize >> pure (newSize, bs)
+      let newSize = size + (BL.length bs)
+      liftIO $ print newSize
+
+      yield bs
+      iter newSize
 
 saveStream :: String -> IO ()
 saveStream url = do
@@ -24,7 +30,7 @@ saveStream url = do
   withHTTP req manager $ \resp ->
     runEffect
       $ responseBody resp
-      >-> P.scanM scanTotalSize (pure (0, BL.empty)) (pure . snd)
+      >-> printTotalSize
       >-> PB.stdout
 
 main :: IO ()
