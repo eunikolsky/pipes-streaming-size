@@ -4,23 +4,17 @@
 import Control.Monad.State.Strict
 import Pipes
 import Pipes.HTTP
-import Pipes.Lift (evalStateP)
 import qualified Data.ByteString as BL
 import qualified Pipes.ByteString as PB
+import qualified Pipes.Prelude as P
 
 type Size = Int
 
--- | Prints the total size of the downloaded stream so far when each new piece
--- is received.
-printTotalSize :: Pipe BL.ByteString BL.ByteString (StateT Size IO) ()
-printTotalSize = forever $ do
-  bs <- await
+type SizeState = (Size, BL.ByteString)
 
-  modify' (+ (BL.length bs))
-  size <- get
-  liftIO $ print size
-
-  yield bs
+scanTotalSize :: SizeState -> BL.ByteString -> IO SizeState
+scanTotalSize (size, _) bs = let newSize = size + (BL.length bs)
+  in print newSize >> pure (newSize, bs)
 
 saveStream :: String -> IO ()
 saveStream url = do
@@ -30,7 +24,7 @@ saveStream url = do
   withHTTP req manager $ \resp ->
     runEffect
       $ responseBody resp
-      >-> evalStateP 0 printTotalSize
+      >-> P.scanM scanTotalSize (pure (0, BL.empty)) (pure . snd)
       >-> PB.stdout
 
 main :: IO ()
