@@ -4,6 +4,7 @@
 import Control.Monad.State.Strict
 import Pipes
 import Pipes.HTTP
+import Pipes.Lift (evalStateP)
 import qualified Data.ByteString as BL
 import qualified Pipes.ByteString as PB
 
@@ -27,9 +28,9 @@ saveStream url = do
   req <- parseUrlThrow url
 
   withHTTP req manager $ \resp ->
-    flip evalStateT 0 $ runEffect
+    runEffect
       $ responseBody resp
-      >-> printTotalSize
+      >-> evalStateP 0 printTotalSize
       >-> PB.stdout
 
 main :: IO ()
