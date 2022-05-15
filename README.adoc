@@ -1,0 +1,3 @@
+## `pipes-streaming-size`
+
+Source code for the blogpost at https://egeek.me/2022/05/15/showing-download-progress-with-pipes/.
